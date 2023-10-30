@@ -55,7 +55,10 @@ public class OAuth20Authorization implements IOAuthAuthorization {
         String url = parameters.getAuthorizationUrl(state, scopes)
                 + "&code_challenge_method=S256&code_challenge=" + s256CodeChallenge;
         AuthorizationHandler.addAuthorizationConsumer(state, new OAuth20AuthorizationHandler(state, codeVerifier, parameters, consumer));
-        OpenBrowser.displayUrl(url);
+        //OpenBrowser.displayUrl("https://meptomtom.b2clogin.com/f555a376-43aa-49b7-9636-3ac08a2a1ae6/b2c_1a_mep_tomtom/oauth2/v2.0/authorize?approval_prompt=force&client_id=4eed11ed-09f7-4a4d-904d-cbca653b3b59&redirect_uri=https%3A%2F%2F127.0.0.1:8111%2Fouth_authorization&response_type=code&scope=https%3A%2F%2FMepTomTom.onmicrosoft.com%2Fmep-staging%2Fread+openid+offline_access&state=MWXlPcMC0OBbkOwXMaOn59XA-mHX17UrvQnPsi5FJ_Q%3Ahttps%3A%2F%2Fvertex.staging.mep.maps.az.tt3.com%2F");
+        OpenBrowser.displayUrl("https://login.microsoftonline.com/374f8026-7b54-4a3a-b87d-328fa26ec10d/oauth2/v2.0/authorize?approval_prompt=force&client_id=c18f7526-7c92-4fe4-9b2c-b70d898e0e67&redirect_uri=http%3A%2F%2Flocalhost:8111%2Foauth_authorization&state=" + state + "&code_challenge_method=S256&code_challenge="+ s256CodeChallenge + "&response_type=code&scope=api%3A%2F%2Fc18f7526-7c92-4fe4-9b2c-b70d898e0e67%2Fread+User.Read+openid+email+profile+offline_access");
+        //OpenBrowser.displayUrl(url);
+        //oauth2/v2.0/token
     }
 
     private static class OAuth20AuthorizationHandler implements AuthorizationHandler.AuthorizationConsumer {
@@ -87,9 +90,10 @@ public class OAuth20Authorization implements IOAuthAuthorization {
                 throws RequestHandler.RequestHandlerErrorException, RequestHandler.RequestHandlerBadRequestException {
             String code = args.get("code");
             try {
-                HttpClient tradeCodeForToken = HttpClient.create(new URL(parameters.getAccessTokenUrl()), "POST");
-                tradeCodeForToken.setRequestBody(("grant_type=authorization_code&client_id=" + parameters.getClientId()
-                        + "&redirect_uri=" + parameters.getRedirectUri()
+                HttpClient tradeCodeForToken = HttpClient.create(new URL("https://login.microsoftonline.com/374f8026-7b54-4a3a-b87d-328fa26ec10d/oauth2/v2.0/token"), "POST");
+                tradeCodeForToken.setRequestBody(("grant_type=authorization_code&client_id=c18f7526-7c92-4fe4-9b2c-b70d898e0e67"
+                        + "&client_secret=???"
+                        + "&redirect_uri=" + "http%3A%2F%2Flocalhost%3A8111%2Foauth_authorization"
                         + "&code=" + code
                         + (this.codeVerifier != null ? "&code_verifier=" + this.codeVerifier : "")
                 ).getBytes(StandardCharsets.UTF_8));

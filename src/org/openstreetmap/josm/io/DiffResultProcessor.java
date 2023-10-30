@@ -54,7 +54,7 @@ public class DiffResultProcessor {
      * mapping from old id to new id and version, the result of parsing the diff result
      * replied by the server
      */
-    private final Map<PrimitiveId, DiffResultEntry> diffResults = new HashMap<>();
+    private Map<PrimitiveId, DiffResultEntry> diffResults = new HashMap<>();
     /**
      * the set of processed primitives *after* the new id, the new version and the new changeset id is set
      */
@@ -212,5 +212,9 @@ public class DiffResultProcessor {
 
     final Map<PrimitiveId, DiffResultEntry> getDiffResults() {
         return new HashMap<>(diffResults);
+    }
+
+    final void setDiffResults(Map<PrimitiveId, DiffResultEntry> diffResults) {
+        this.diffResults = diffResults;
     }
 }

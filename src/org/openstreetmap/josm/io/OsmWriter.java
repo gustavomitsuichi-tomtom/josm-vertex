@@ -260,7 +260,8 @@ public class OsmWriter extends XmlWriter implements PrimitiveVisitor {
         } else {
             out.println(">");
             for (int i = 0; i < w.getNodesCount(); ++i) {
-                out.append("    <nd ref='").append(String.valueOf(w.getNodeId(i))).append("' />");
+                var orbisNodeId = w.getKeys().get(String.format("node_%s_orbisId", w.getNodeId(i)));
+                out.append("    <nd ref='").append(orbisNodeId).append("' />");
                 out.println();
             }
             addTags(w, "way", false);
@@ -278,7 +279,8 @@ public class OsmWriter extends XmlWriter implements PrimitiveVisitor {
             for (int i = 0; i < e.getMembersCount(); ++i) {
                 out.print("    <member type='");
                 out.print(e.getMemberType(i).getAPIName());
-                out.append("' ref='").append(String.valueOf(e.getMemberId(i)));
+                var orbisId = e.getMember(i).getMember().getKeys().get("orbisId");
+                out.append("' ref='").append(orbisId);
                 out.append("' role='").append(XmlWriter.encode(e.getRole(i))).append("' />");
                 out.println();
             }
@@ -327,6 +329,9 @@ public class OsmWriter extends XmlWriter implements PrimitiveVisitor {
             List<Entry<String, String>> entries = new ArrayList<>(osm.getKeys().entrySet());
             entries.sort(byKeyComparator);
             for (Entry<String, String> e : entries) {
+                if (e.getKey().equals("orbisId") || e.getKey().equals("memberOrbisId")) {
+                    continue;
+                }
                 out.append("    <tag k='").append(XmlWriter.encode(e.getKey()));
                 out.append("' v='").append(XmlWriter.encode(e.getValue())).append("' />");
                 out.println();
@@ -348,7 +353,7 @@ public class OsmWriter extends XmlWriter implements PrimitiveVisitor {
     protected void addCommon(IPrimitive osm, String tagname) {
         out.append("  <").append(tagname);
         if (osm.getUniqueId() != 0) {
-            out.append(" id='").append(String.valueOf(osm.getUniqueId())).append("'");
+            out.append(" id='").append(osm.getKeys().get("orbisId")).append("'");
         } else
             throw new IllegalStateException(tr("Unexpected id 0 for osm primitive found"));
         if (!isOsmChange) {

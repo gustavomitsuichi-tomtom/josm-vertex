@@ -333,15 +333,17 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
      */
     private void closeChangeset() throws OsmTransferException {
         if (changeset != null && !changeset.isNew() && changeset.isOpen()) {
-            try {
-                OsmApi.getOsmApi().closeChangeset(changeset, progressMonitor.createSubTaskMonitor(0, false));
-            } catch (ChangesetClosedException e) {
-                // Do not raise a stink, probably the changeset timed out.
-                Logging.trace(e);
-            } finally {
-                changeset.setOpen(false);
-                ChangesetCache.getInstance().update(changeset);
-            }
+            changeset.setOpen(false);
+            ChangesetCache.getInstance().update(changeset);
+//            try {
+//                OsmApi.getOsmApi().closeChangeset(changeset, progressMonitor.createSubTaskMonitor(0, false));
+//            } catch (ChangesetClosedException e) {
+//                // Do not raise a stink, probably the changeset timed out.
+//                Logging.trace(e);
+//            } finally {
+//                changeset.setOpen(false);
+//                ChangesetCache.getInstance().update(changeset);
+//            }
         }
     }
 

@@ -76,26 +76,26 @@ public final class MessageNotifier {
 
         @Override
         public void run() {
-            try {
-                long currentTime = System.currentTimeMillis();
-                // See #14671 - Make sure we don't run the API call many times after system wakeup
-                if (currentTime >= lastTimeInMillis + TimeUnit.MINUTES.toMillis(PROP_INTERVAL.get())) {
-                    lastTimeInMillis = currentTime;
-                    final UserInfo userInfo = new OsmServerUserInfoReader().fetchUserInfo(NullProgressMonitor.INSTANCE,
-                            tr("get number of unread messages"));
-                    final int unread = userInfo.getUnreadMessages();
-                    if (unread > 0 && unread != lastUnreadCount) {
-                        callback.notifyNewMessages(userInfo);
-                        lastUnreadCount = unread;
-                    }
-                }
-            } catch (OsmApiException e) {
-                // We want to explicitly display message to user in some cases like when he has been blocked (#17722)
-                ExceptionDialogUtil.explainOsmTransferException(e);
-            } catch (OsmTransferException e) {
-                // But not message for random network or API issues (like in #17929)
-                Logging.warn(e);
-            }
+//            try {
+//                long currentTime = System.currentTimeMillis();
+//                // See #14671 - Make sure we don't run the API call many times after system wakeup
+//                if (currentTime >= lastTimeInMillis + TimeUnit.MINUTES.toMillis(PROP_INTERVAL.get())) {
+//                    lastTimeInMillis = currentTime;
+//                    final UserInfo userInfo = new OsmServerUserInfoReader().fetchUserInfo(NullProgressMonitor.INSTANCE,
+//                            tr("get number of unread messages"));
+//                    final int unread = userInfo.getUnreadMessages();
+//                    if (unread > 0 && unread != lastUnreadCount) {
+//                        callback.notifyNewMessages(userInfo);
+//                        lastUnreadCount = unread;
+//                    }
+//                }
+//            } catch (OsmApiException e) {
+//                // We want to explicitly display message to user in some cases like when he has been blocked (#17722)
+//                ExceptionDialogUtil.explainOsmTransferException(e);
+//            } catch (OsmTransferException e) {
+//                // But not message for random network or API issues (like in #17929)
+//                Logging.warn(e);
+//            }
         }
     }
 

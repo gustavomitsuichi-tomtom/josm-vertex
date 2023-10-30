@@ -326,7 +326,7 @@ public class UploadAction extends AbstractUploadAction {
         Logging.info(cs.toString());
         dialog.clean();
 
-        if (Config.getPref().getBoolean(IS_ASYNC_UPLOAD_ENABLED, true)) {
+        if (Config.getPref().getBoolean(IS_ASYNC_UPLOAD_ENABLED, false)) {
             Optional<AsynchronousUploadPrimitivesTask> asyncUploadTask = AsynchronousUploadPrimitivesTask.createAsynchronousUploadTask(
                     uploadStrategySpecification, layer, apiData, cs);
 

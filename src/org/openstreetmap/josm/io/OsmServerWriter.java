@@ -198,13 +198,15 @@ public class OsmServerWriter {
         try {
             api.initialize(monitor);
             // check whether we can use diff upload
-            if (changeset.getId() == 0) {
-                api.openChangeset(changeset, monitor.createSubTaskMonitor(0, false));
-                // update the user information
-                changeset.setUser(UserIdentityManager.getInstance().asUser());
-            } else {
-                api.updateChangeset(changeset, monitor.createSubTaskMonitor(0, false));
-            }
+//            if (changeset.getId() == 0) {
+//                api.openChangeset(changeset, monitor.createSubTaskMonitor(0, false));
+//                // update the user information
+//                changeset.setUser(UserIdentityManager.getInstance().asUser());
+//            } else {
+//                api.updateChangeset(changeset, monitor.createSubTaskMonitor(0, false));
+//            }
+            changeset.setId(1);
+            changeset.setOpen(true);
             api.setChangeset(changeset);
             switch(strategy.getStrategy()) {
             case SINGLE_REQUEST_STRATEGY:

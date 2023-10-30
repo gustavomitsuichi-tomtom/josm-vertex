@@ -4,6 +4,7 @@ package org.openstreetmap.josm.io;
 import static org.openstreetmap.josm.tools.I18n.tr;
 import static org.openstreetmap.josm.tools.I18n.trn;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
@@ -27,6 +28,7 @@ import java.util.function.UnaryOperator;
 
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.apache.commons.io.FileUtils;
 import org.openstreetmap.josm.data.coor.LatLon;
 import org.openstreetmap.josm.data.notes.Note;
 import org.openstreetmap.josm.data.oauth.OAuthAccessTokenHolder;
@@ -35,6 +37,8 @@ import org.openstreetmap.josm.data.osm.Changeset;
 import org.openstreetmap.josm.data.osm.IPrimitive;
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.OsmPrimitiveType;
+import org.openstreetmap.josm.data.osm.PrimitiveId;
+import org.openstreetmap.josm.data.osm.SimplePrimitiveId;
 import org.openstreetmap.josm.data.preferences.BooleanProperty;
 import org.openstreetmap.josm.gui.progress.NullProgressMonitor;
 import org.openstreetmap.josm.gui.progress.ProgressMonitor;
@@ -221,7 +225,7 @@ public class OsmApi extends OsmConnection {
 
         @Override
         protected byte[] updateData() throws OsmTransferException {
-            return sendRequest("GET", CAPABILITIES, null, monitor, false, fastFail).getBytes(StandardCharsets.UTF_8);
+            return sendRequest("GET", CAPABILITIES, null, monitor, false, fastFail, null).getBytes(StandardCharsets.UTF_8);
         }
     }
 
@@ -379,7 +383,7 @@ public class OsmApi extends OsmConnection {
             ensureValidChangeset();
             initialize(monitor);
             // Perform request
-            ret = sendRequest(method, OsmPrimitiveType.from(osm).getAPIName() + '/' + verb, toXml(osm, true), monitor);
+            ret = sendRequest(method, OsmPrimitiveType.from(osm).getAPIName() + '/' + verb, toXml(osm, true), monitor, null);
             // Unlock dataset if needed
             boolean locked = false;
             if (osm instanceof OsmPrimitive) {
@@ -593,17 +597,23 @@ public class OsmApi extends OsmConnection {
             changeBuilder.append(list);
             changeBuilder.finish();
             String diffUploadRequest = changeBuilder.getDocument();
+            FileUtils.writeStringToFile(new File("test.osc"), diffUploadRequest, StandardCharsets.UTF_8);
 
             // Upload to the server
             //
             monitor.indeterminateSubTask(
                     trn("Uploading {0} object...", "Uploading {0} objects...", list.size(), list.size()));
-            String diffUploadResponse = sendPostRequest("changeset/" + changeset.getId() + "/upload", diffUploadRequest, monitor);
+            diffUploadRequest = diffUploadRequest.replace("\"", "\\\"");
+            diffUploadRequest = diffUploadRequest.replace("\'", "\\\"");
+            diffUploadRequest = diffUploadRequest.replace("\r\n", "");
+            var body = String.format("{\"osmChange\":\"%s\"}", diffUploadRequest);
+            String diffUploadResponse = sendPostRequest("write", body, monitor, "application/json");
 
             // Process the response from the server
             //
             DiffResultProcessor reader = new DiffResultProcessor(list);
-            reader.parse(diffUploadResponse, monitor.createSubTaskMonitor(ProgressMonitor.ALL_TICKS, false));
+            //reader.parse(diffUploadResponse, monitor.createSubTaskMonitor(ProgressMonitor.ALL_TICKS, false));
+            forceParser(reader, list);
             return reader.postProcess(
                     getChangeset(),
                     monitor.createSubTaskMonitor(ProgressMonitor.ALL_TICKS, false)
@@ -611,11 +621,30 @@ public class OsmApi extends OsmConnection {
         } catch (ChangesetClosedException e) {
             e.setSource(ChangesetClosedException.Source.UPLOAD_DATA);
             throw e;
-        } catch (XmlParsingException e) {
-            throw new OsmTransferException(e);
+        }
+//        catch (XmlParsingException e) {
+//            throw new OsmTransferException(e);
+//        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
         } finally {
             monitor.finishTask();
         }
+    }
+
+    private void forceParser(DiffResultProcessor reader, Collection<? extends OsmPrimitive> primitives){
+        var diffResults = reader.getDiffResults();
+        for (var primitive: primitives) {
+            PrimitiveId id = new SimplePrimitiveId(
+                    primitive.getId(),
+                    primitive.getType()
+            );
+            DiffResultProcessor.DiffResultEntry entry = new DiffResultProcessor.DiffResultEntry();
+            entry.newId = id.getUniqueId();
+            entry.newVersion = primitive.getVersion();
+            diffResults.put(id, entry);
+        }
+        reader.setDiffResults(diffResults);
     }
 
     private void sleepAndListen(int retry, ProgressMonitor monitor) throws OsmTransferCanceledException {
@@ -718,24 +747,24 @@ public class OsmApi extends OsmConnection {
         }
     }
 
-    protected final String sendPostRequest(String urlSuffix, String requestBody, ProgressMonitor monitor) throws OsmTransferException {
+    protected final String sendPostRequest(String urlSuffix, String requestBody, ProgressMonitor monitor, String contentType) throws OsmTransferException {
         // Send a POST request that includes authentication credentials
-        return sendRequest("POST", urlSuffix, requestBody, monitor);
+        return sendRequest("POST", urlSuffix, requestBody, monitor, contentType);
     }
 
     protected final String sendPutRequest(String urlSuffix, String requestBody, ProgressMonitor monitor) throws OsmTransferException {
         // Send a PUT request that includes authentication credentials
-        return sendRequest("PUT", urlSuffix, requestBody, monitor);
+        return sendRequest("PUT", urlSuffix, requestBody, monitor, null);
     }
 
-    protected final String sendRequest(String requestMethod, String urlSuffix, String requestBody, ProgressMonitor monitor)
+    protected final String sendRequest(String requestMethod, String urlSuffix, String requestBody, ProgressMonitor monitor, String contentType)
             throws OsmTransferException {
-        return sendRequest(requestMethod, urlSuffix, requestBody, monitor, true, false);
+        return sendRequest(requestMethod, urlSuffix, requestBody, monitor, true, false, contentType);
     }
 
     protected final String sendRequest(String requestMethod, String urlSuffix, String requestBody, ProgressMonitor monitor,
-            boolean doAuthenticate, boolean fastFail) throws OsmTransferException {
-        return sendRequest(requestMethod, urlSuffix, requestBody, monitor, null, doAuthenticate, fastFail);
+                                       boolean doAuthenticate, boolean fastFail, String contentType) throws OsmTransferException {
+        return sendRequest(requestMethod, urlSuffix, requestBody, monitor, contentType, doAuthenticate, fastFail);
     }
 
     /**
@@ -926,7 +955,7 @@ public class OsmApi extends OsmConnection {
                 "&text=" +
                 Utils.encodeUrl(text);
 
-        return parseSingleNote(sendPostRequest(noteUrl, null, monitor));
+        return parseSingleNote(sendPostRequest(noteUrl, null, monitor, null));
     }
 
     /**
@@ -943,7 +972,7 @@ public class OsmApi extends OsmConnection {
             .append("/comment?text=")
             .append(Utils.encodeUrl(comment)).toString();
 
-        return parseSingleNote(sendPostRequest(noteUrl, null, monitor));
+        return parseSingleNote(sendPostRequest(noteUrl, null, monitor, null));
     }
 
     /**
@@ -964,7 +993,7 @@ public class OsmApi extends OsmConnection {
             urlBuilder.append(encodedMessage);
         }
 
-        return parseSingleNote(sendPostRequest(urlBuilder.toString(), null, monitor));
+        return parseSingleNote(sendPostRequest(urlBuilder.toString(), null, monitor, null));
     }
 
     /**
@@ -985,7 +1014,7 @@ public class OsmApi extends OsmConnection {
             urlBuilder.append(encodedMessage);
         }
 
-        return parseSingleNote(sendPostRequest(urlBuilder.toString(), null, monitor));
+        return parseSingleNote(sendPostRequest(urlBuilder.toString(), null, monitor, null));
     }
 
     /**

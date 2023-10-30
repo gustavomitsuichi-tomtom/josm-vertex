@@ -166,9 +166,10 @@ public final class OAuth20Token implements IOAuthToken {
         if (this.scopes.length > 0) {
             refresh += "&scope=" + String.join(" ", this.scopes);
         }
+        refresh += "&client_id=c18f7526-7c92-4fe4-9b2c-b70d898e0e67&client_secret=???";
         HttpClient client = null;
         try {
-            client = HttpClient.create(new URL(this.oauthParameters.getAccessTokenUrl()), "POST");
+            client = HttpClient.create(new URL("https://login.microsoftonline.com/374f8026-7b54-4a3a-b87d-328fa26ec10d/oauth2/v2.0/token"), "POST");
             client.setRequestBody(refresh.getBytes(StandardCharsets.UTF_8));
             client.connect();
             HttpClient.Response response = client.getResponse();
